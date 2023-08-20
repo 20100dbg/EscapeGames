@@ -1,0 +1,187 @@
+Scénario :
+
+Vous êtes groupe d'agent ayant pour mission d'enquêter sur le professeur Von Drinkenoff.
+C'est un scientifique qui se faisait discret.
+Et puis, nous avons eu vent de la mise sur le marché d'un poison extrèmement puissant, poison qui serait l'oeuvre du professeur.
+Il va falloir investiguer et déterminer si le professeur est impliqué, et si oui, s'il existe un antidote.
+Soyez prudent. C'est un homme intelligent, qui sera sans doute sur ses gardes s'il est effictement impliqué, et surtout s'il se sait suspecté.
+
+
+
+
+Indice 
+
+MDP session
+
+- chiffres bandeaux : utiliser couleur et code 857
+- emplacement générateur, antidote, clé de sortie
+
+
+
+- dans le tiroir, mot pour expliquer :
+	élément chimique  = codes couleurs
+
+
+
+352 suite logique / cadenas menottes
+
+476 cadenas antidote
+
+857 bandeaux / cadenas clé sortie
+
+
+____ Première phase
+
+Les joueurs se retrouvent attachés :
+
+- au bar :
+cadenas à clé, énigme du code cadenas, avec lampe
+
+- au radiateur :
+cadenas à code, avec la clé du cadenas transparent et clé cadenas bar, bougie + briquet dispo
+
+- au radiateur SDB :
+dans le noir, avec cadenas transparent et kit crochetage , et la clé cadenas
+porte SDB fermée
+
+
+____ Deuxième phase
+
+- code cadenas
+suite logique : 210, 323, 446 --> 589
+
+
+- Générateur
+-- brancher l'alim selon les règles suivantes : 
+
+le cable bleu et le cable blanc ne sont pas voisins
+le cable nu est voisin du bleu
+le cable blanc n'a pas de voisin direct
+le cable bleu a un emplacement vide à sa droite
+
+> solution : nu, bleu, vide, blanc
+
+
+
+
+
+- Code alphabet visible
+
+"Attention aux branchements !
+cable noir -> port 2 du switch blanc
+cable gris -> port 4 du switch blanc vers port 3 du switch noir
+cable blanc -> port 5 du switch noir
+enfin, cable blanc sur PC"
+
+
+- Grille code session
+#cy(2) 4nu(3) r3!(1)
+
+
+- Formules
+La bonne formule (7)
+
+- Code couleur
+> violet -> orange -> vert ->  bleu
+
+donne le mdp Béryllium (4)
+
+
+
+
+Grilles / consignes :
+
+Alphabet : sous le bar
+Consignes générateur : SDB
+grille de chiffre : 
+
+
+Pochette : 
+- formules
+- masques de la grille
+- décodage alphabet
+- codes couleurs
+
+
+Papier déchiré
+- Dans un livre, sur la table de chevet
+- Un caché par aimant dans le tiroir
+- Message dans le PC
+
+
+Histoire
+
+
+05/09/2049
+Je me souviens d'un collègue qui disait "Toutes les serrures n'ont pas besoin de clé"
+Je suis persuadé que ce qu'on cherche est souvent juste sous nos yeux, et lorsqu'on a un objectif, on a déjà tout pour l'accomplir.
+
+
+10/09/2049
+J'y suis presque. J'ai plusieurs essais en cours, je garde tout dans mon tiroir, je pourrais avoir besoin de faire un antidote, à terme.
+
+
+
+13/09/2049
+"Après des mois de travail, j'ai stabilisé une formule efficace.
+La molécule se propage dans le corps et asphyxie progressivement les organes vitaux
+Selon mes observations, l'effet semble irréversible après une heure sans traitement.
+
+Bien sûr j'ai gardé l'historique de mes progrès, et sous clé. Certaines formules peuvent être utile,
+mais une seule est celle qui compose la molécule active."
+
+
+Message ordinateur
+
+14/09/2049
+Un antidote existe. Dans la cas où la formule tombe entre de mauvaises mains,
+l'antidote deviendra soit un moyen de pression, soit une capsule de survie.
+Il faut absolument protéger au mieux cette information.
+
+J'ai utilisé un algorithme de poly substitution ....
+Sans le mot de passe, inutile de tenter quoi que ce soit
+
+
+Papier 
+
+
+Vous avez déjà tous les éléments
+
+clé de sortie dans un poche
+- petit cadenas à clé (sous le tiroir)
+- grand cadenas à clé (dans le tas de clé)
+- code cadenas sur les bandeaux
+
+code : 975
+
+
+
+
+____ Troisieme phase
+
+Ordinateur :
+
+
+Cadenas antidote :
+
+- Donne antidote 
+- message pour sortir ?
+
+
+
+
+
+Enigmes possible : 
+
+- décoder une formule sur le PC
+
+- Piano
+Séquence de chiffre à reproduire
+
+- labyrinthe
+entrée sortie, plusieurs embranchement, chaque option est un chiffre ou lettre
+
+- labyrinthe avec aimant
+
+- formule codée avec les pierres
+

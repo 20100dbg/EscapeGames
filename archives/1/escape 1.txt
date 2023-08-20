@@ -1,0 +1,118 @@
+Présentation :
+
+Cet escape est linéaire et plutôt simple, mais demande du matériel particulier :
+
+- clé usb SDR
+- poste radio UHF
+- mug thermoréactif
+- kit crochetage
+
+
+
+
+Intro :
+
+Vous êtes groupe d'agent ayant pour mission d'enquêter sur le professeur Von Drinkenoff.
+C'est un scientifique marginal qui travaillait pour l'agence, il semblait de plus en plus dérangé jusqu'à ce qu'il disparaisse sans donner d'explication.
+Vous vous introduisez dans son manoir pour tâcher d'en savoir plus. Au cours de votre progression, vous vous rendez rapidement compte que le professeur a visiblement sombré dans la folie.
+Il est paranoïaque et il cache et met sous clé tout ce qui a un intérêt à ses yeux.
+
+Vous vous enfoncez davantage dans le manoir...
+
+
+
+
+Eléments à disposer :
+
+- Poche 1 (code 1) au niveau du lit
+- Mot "étoile" sous le poster "I Want to believe"
+
+- Etoile sous la dalle inférieure gauche, au dessus de la fusée
+- Poche 2 (code 2) dans le faux plafond
+
+- Poche 3 (code 3) dans la chasse d'eau
+- Sac PC (cadebas transparent) sous l'armoire marquée d'un aigle bronze
+
+- Patch aigle sur le tiroir à clé avec chiffre 4
+- tableau périodique à afficher
+- mug astro sur la table basse
+
+- Poche 4 (cadenas clé) sous la table basse
+- Clé cadenas sous le tiroir à clé
+
+- Clé de la porte dans la corne
+
+
+
+
+
+Sur la fenêtre :
+- Indice 2-3-1 (2 bleu, 3 rouge, 1 noir)
+- Table binaire jusqu'à 64
+- Enigme premier code :
+649 -> 1 ok
+638 -> 1 mal placé
+956 -> 2 mal placé
+214 -> rien ok
+245 -> 1 mal placé
+
+
+Radio animateur : FRQ 445 et 460
+Radio joueur : FRQ 445 et XXX
+
+
+Déroulé :
+
+- Message audio intro (indice pour trouver la poche 1)
+- Découverte poche 1 -> ouverture grâce à l'énigme fenêtre
+
+
+
+
+
+Poche 1 :
+- cachée dans le lit
+- solution : énigme sur la fenêtre
+- contient :
+Entrée 1 : 
+Indice pour trouver le mot sous le poster + code binaire
+
+Mot poster :
+
+
+Poche 2 :
+- dans le faux plafond
+- solution : code binaire
+- contient : 
+Entrée 2 : Indice oiseau, Liste d'éléments chimiques
+jeu de carte, kit de crochetage
+
+
+Poche 3 :
+- Dans la chasse d'eau
+- solution : éléments chimiques additionnés
+- Contient :
+Entrée 3 : Indice MDP session
+Clé SDR + antenne
+
+
+Sac PC :
+- Solution : cadenas à crocheter
+Contient le PC et la clé du tiroir
+
+
+Poche 4 :
+- Sous la table basse
+- Clé du cadenas aimanté sous le tiroir à clé
+Contient l'indice de la corne
+
+
+
+sens des codes : 2 3 1
+sens des codes : bleu rouge noir
+
+code 1 : 589
+code 2 : 746
+code 3 : 115
+
+mdp pc : 746115589

@@ -1,0 +1,1349 @@
+Is there a meeting today?
+yes
+I have to step away now though
+wardi, joet, seanh, amercader - meeting!
+https://plus.google.com/hangouts/_/event/cb1vmkss426lkqicj94a3amvd1c?authuser=0&hl=en-GB
+nigelb: wardi I can't make it today
+seanh: no worries. i still found a pr for you to review
+you're welcome
+seanh: 2 questions about activity streams
+1. is there such a thing as a "global" activity stream where sysadmins can see all activities emitted
+2. is there a provided mechanism for deleting old activities?
+amercader: There's no way to delete activities
+I don't think there's any global activity stream either, although this would be easy to add, just an action function that pulls every row from the activity table, dictizes and returns them all (you'd want limiting and pagination though)
+Do you really need to use activity streams for this EC audit thing? That seems like complicating it to me
+seanh: yeah, I'm trying to have a look at the options
+sure there's a global activity stream
+oh, I'm thinking package_activity_list
+wardi: that's hardly global :)
+I meant across all datasets, orgs, etc
+like the /revision page
+amercader: tunnel vision. I only care about package changes at the moment
+amercader: is nickstenn's +1 on the passlib pr good enough, or would you still like to review?
+There was a proposal (long ago) to replace the /revision page with a global activity stream page actually
+to be honest
+* wardi supports that idea
+please don't.
+they are for different things.
+Or rather, that's how I look at them.
+nigelb: if we put the actual changes in the activities then they aren't
+There is also a proposal to merge the remaining revisions features into the activities..
+wardi: well, sometimes we want to turn off updates from a certain user.
+But I still want a way to know if that happened.
+ok, why can't we filter activities?
+hmm.
+I can't think of any reason except we'd need to think of the UX carefully.
+vdm needs to go away. in my mind the best thing to replace it would be before/after json dumps (or a reversible json-patch) of objects in the activity records
+wardi: Oh, I don't mean we need VDM.
+I was trying to say activity is different from changing the package object.
+hmm. aren't our revisions heavily tied to vdm?
+they are, unfortunately.
+Again, I'm happy with destroying the implementations of revisions.
+ok, so you're saying activites and revisions are conceptually different?
+I'm trying to say that, yes.
+"nigel was added as an admin" is part of activity stream
+but I don't see it being part of revisions.
+hmm. but that changes an object in the db
+Hrm.
+maybe my idea is skewed.
+I will admit to not having thought this out properly.
+we might not want to serialize the revision info for some activities: "wardi forgot and reset his password. again."
+I don't see this information being relevant for the user model.
+groups, packages, and orgs are what we need to get right.
+and that's where it'll be relevant.
+what about group and org members?
+well, you made a good case above for it being part of the object.
+activities of group members relevant to the group/org.
+wardi: I think it comes down to UX.
+How can we do this merge of revisions and activity streams and not have it be dreadful.
+it's a challenge
+Thinking like a developer, I would say, like git history, but non-devs are going to find that confusing.
+especially when "hey, I reverted this, why is it stil there!"
+there's some of my ramblings in https://github.com/ckan/ideas-and-roadmap/issues/41
+and https://github.com/ckan/ideas-and-roadmap/issues/45
+added a comment about my concern with UI.
+wardi: re 1658 (passlib) if nick and you are happy, I'm happy. I'll add some minor comments
+amercader: cool, you can assign it back to me and I'll follow up and merge
+done
+seanh: did you mention recently that flash messages were getting lost when we redirect to the login page after a NotAuhtorized is raised?
+All flash messages in CKAN have been getting lost for a year or two
+I pushed a fix, not sure it it's in master yet
+Oh wait, I remember actually someone else had already fixed it on master recently
+seanh: you mean this? https://github.com/ckan/ckan/pull/1744
+Yeah
+that didn't fix it for me
+they disappear from the session somehow
+ok thanks, I'll keep looking, it was just to check if you had another fix
+Hmm, is this when no one is logged in?
+yeah, and trying to access a sysadmin only page
+When I tried to add a (non-flash) item to the session, it seemed to be getting cleared on every page load when no one is logged in
+I'll try with a normal user logged in
+If the next response from CKAN is a redirect, then by the time do another request to follow the redirect the session has been cleared, flash messages with it?
+might be something like that, it also doesn't work with a logged in user (flash message lost)
+it's confusing because you get redirected to the login page but nowhere tells you "You were not auhtorized to do X"
+Yeah
+I suspect something is emptying out the session
+so the session is per-page only?
+I didn't look into it deeply, but it seemed that when no one is logged-in the session is per-request
+My session item was disappearing, anyway
+Anyone know why `git tag -l` would output nothing on Traivs?
+We have this code as part of the Sphinx build: https://github.com/ckan/ckan/blob/add-sphinx-test/doc/conf.py#L163
+The assert on line 169 is failing on Travis, and printing an empty list
+Hmm, trying to figure out a better way to generate config files for automatic tools like Docker and Travis
+I've made paster make-config read environment variables, which is fine for the dev/prod config file
+But for the tests config file, I would need to get it to optionally choose a different template as well
+Don't see how to get paster make-config to do that
+We could add our own simple paster command, but it would have to be called something other than make-config
+paster create-config-file?
+if we're adding new things should we add them to the ckan command instead of as paster commands?
+paster is usually extendable.
+are we sure we can extend thta command?
+The ckan command currently only exists in the package install, needs some work to bring it into core and make it work for source and docker installs
+Maybe I should just do that now though
+nigelb: but paster is one of those things tying us to python2
+I don't see how to make paster make-config choose one template or another based on a command-line option
+wardi: is there a way to use pylons that does not involve paster?
+We could certainly do it if we added our own paster create-config-file command and just removed paster make-config from all the docs
+nigelb: pylons is one of those things too :-)
+Heh
+I'll also point out that jinja2 only has experimental python 3 support. Though, it will be more mature by the time we're ready (if ever) to switch.
+it's easy to make a command that wraps calls to paster (and that thing should be the ckan command) then that is a step towards replacing those old unmaintained things underneath
+the ckan command makes assumptions on where you install ckan
+and if we're writing something completely new that doesn't even need to run ckan (like a thing that generates config files) why not develop it in the ckan command?
+we need to fix that, I think.
+Alright, maybe I'll drop this for now and have a go at a ckan command when I have a couple of days
+wardi: What are your thoughts about how a ckan command should work? Add them to this issue if you want: https://github.com/ckan/ckan/pull/1828
+seanh: please feel free to ignore my suggestions if they slow you down. we can improve things later too
+I think the ckan command should be installed as a console_script from setup.py so it can always find where ckan is installed
+and then the right one will be available if you have a bunch of ckans in virtualenvs
+And we'll just use argparse?
+* wardi likes docopt
+In the docker container CKAN is installed inside a virtualenv, so I guess the ckan command wouldn't be on the path unless the virtualenv was activated. We can just hack the path and prepend it though, or set it as docker's ENTRY_POINT or whatever
+is there a reason we're using a virtualenv with docker?
+To protect CKAN from the system packages, and for consistency with the source and package installs
+We always create our empty virtualenv with site packages disabled and install exactly what we need into it. If we installed without a virtualenv, instead of a blank slate we'd be starting with whatever python packages Ubuntu has installed. Would we get the same result?
+I guess another reason is it gives us separation if we want to change or upgrade the container's OS for some reason
+So docopt is better than argparse?
+docopt is awesome. argparse is a slightly improved optparse
+it might be harder to delegate from a docopt program to an argparse one, though
+so I'm thinking of breaking IDatasetForm a little more
+I want a resource_form method
+Would we need to delegate? There's not that many paster commands, it'd be tempting to just re-implement them all. Maybe for paster serve we'd have to call the original paster command
+seanh: I'm cool with that
+at a minimum we'd need to describe all the subcommands in the ckan command as well as in the paster-run code
+It looks like we'd need all the CKAN commands that are currently implemented in CKAN itself
+Plus paster serve and a paster make-config replacement
+you wouldn't just pass their arguments and options through?
+I think that's all?
+I think I'd move all the commands in cli.py to be just functions in a lib somewhere, and re-implement their UIs
+For paster serve, we should probably just pass-through
+I dunno, that might take a while, maybe a simple wrapper for paster that just makes it easier to call and that lets us add new non-paster commands would be better
+scheming dataset and resource forms are working \o/
+evening
+May have gotten up a little too early :)
+you're excited about docker aren't you
+no comment :P
+today (yesterday) was awesome. docker and two-stage dataset create got merged
+two-stage dataset too? hurrah!
+oh yeah
+I might have been too gentle on PackageController, it's likely there's more that can be simplified now
+vitorbaptista mentioned fixing the state.startswith('draft') stuff
+I haven't looked at my bug list
+I've been backporting
+the solr-cruft one is merged to master now
+oh good
+seems like a productive monday in ckan land
+Did rparra ever figure out about the email notifications translations?
+I'm sure I remember thinking about that at the time, but can't remember what I did about it
+I suspect it uses whatever the site's default language is, since users in CKAN don't have any language setting in their user prefs
+* NOTICE: [freenode-info] if you're at a conference and other people are having trouble connecting, please mention it to staff: http://freenode.net/faq.shtml#gettinghelp
+Can somebody quickly test something on IE for me?
+less than 2 minutes or your money back *guaranteed*
+amercader, I can probably do so
+joet: awesome
+https://gist.github.com/amercader/dba4396c22e604b0ce8e
+joet: ^
+can you paste on skype?
+ok amercader it seems to work fine on IE 11
+if you give me 10 minutes I have a machine downstairs which is still running windows xp
+joet: there's no rush at all, if you can test it at some point that would be great
+dev meeting in 2 minutes
+http://pad.okfn.org/p/ckan-meeting
+https://plus.google.com/hangouts/_/event/cb1vmkss426lkqicj94a3amvd1c?authuser=0&hl=en-GB
+nigelb, you're not in the meeting?
+https://github.com/okfn/ckanext-queue
+joet_: took 5 minutes to get a connection stable enough for hangouts :P
+lol
+I think 'following' is broken. Whilst you can follow an organisation via the API, if JS isn't working then master.ckan.org/group/follow/4e768617-0f1b-48ed-a092-6e516d525c56 fails :(
+https://github.com/ckan/ckan/issues/1821
+nigelb am I allowed to tag issues Good for contribution by myself or does it have to be through a team meeting?
+What's the email address for security disclosures?
+amercader?
+rossjones: security@ckan.org
+Ta.
+rossjones: pretty sure you can just go ahead and tag them
+:D
+Should have an easy tag too for when the fix is in the ticket ;)
+rossjones: you can do it
+nickstenn: Have you started working on copying your config file jinja stuff from ckanexpress to core? If not maybe hold off on it, I think we should wrap it in a new paster command that the package and source installs can use as well, and simply stop using paster make-config
+anyone know what groups__0__id is abouve?
+*about?
+something to do with the form?
+it's a hidden value buried in the middle of the package form that gets set when there's a 'group' parameter passed to PackageController.new()
+which I guess happens when you're viewing a group and you create a new package from there
+I'm trying to rationalize this with my scheming extension.. where should this special field go? it being mixed in with the organization form field doesn't really help
+does it pass owner_org when it is an organization or still using group__0__id?
+rossjones: the org seems to get passed as the group parameter
+oh, I don't see a place to create datasets in the group pages, just the org pages
+so 'group' and 'groups__0__id' is always an org id, I guess
+1.x-ism I think.
+so maybe there used to be a way to create a package from a group page
+vitorbaptista_ hello, I know it's been a while but: did you ever figure out what was causing this error: https://lists.okfn.org/pipermail/ckan-dev/2013-November/006184.html
+I seem to be having the same issue.
+https://github.com/ckan/ckan/blob/master/ckan/templates/package/snippets/package_basic_fields.html#L62-L64
+^ I'm confused, how does this work and where does it get closed?
+nevermind found it
+rparra: To be honest, I don't remember :/ I think I was able to solve it, but I'm not sure how
+rparra: If you're facing this on master, please create an issue
+I'm on 2.2. I set up an hourly cronjob and just received the updates
+So it seems to affect only the paster command. It's rather odd, but not that critical, at least
+Perhaps something similar happened to you :) Thanks anyway
+rparra I'm guessing, but doesn't it require some form of auth?
+Sorry I couldn't be more helpful. I hate when I rely too much on my memory and end up forgetting stuff :/
+or does the post command automatically add it?
+vitorbaptista_ no problem, happens to all of us.
+rossjones I actually just copied the command from the cronjob defined here: http://docs.ckan.org/en/943-writing-extensions-tutorial/email-notifications.html#email-notifications
+I am not sure about how it works but I just assumed that, since it is a local command, it somehow bypasses auth automagically
+yes, but there's some sneaky code that replaces all the actions with wrappers that check if the function calls the auth method
+wardi: ... and there was a bug a few weeks ago where that code was raising exceptions when methods called with paster didn't call the auth functions. Might be related
+can the strings at ckan/templates/activity_streams/activity_stream_email_notifications.text be translated? if they can be, how is the email language determined?
+nope, they're in the database and mixed with text from datasets (i.e. terrible)
+rparra: oh, sorry, I wasn thinking about the activity description text
+wardi: the file I referenced seems to be i18n ready. I just wonder how the language is selected. I guess I'll try it out
+rparra if it makes you feel any better, my ckan is not sending notifications now either :(
+[travis-ci] ckan/ckan 1764-solr-rubbish cdf8dfd http://travis-ci.org/ckan/ckan/builds/28804587 Ian Ward: The build was broken.
+oh. I hope docker can fix our "solr didn't feel like starting on travis this time" issues
+[travis-ci] ckan/ckan 1764-solr-rubbish cdf8dfd http://travis-ci.org/ckan/ckan/builds/28804587 Ian Ward: The build has errored.
+it should fix our pip install errors...
+[travis-ci] ckan/ckan 1764-solr-rubbish cdf8dfd http://travis-ci.org/ckan/ckan/builds/28804587 Ian Ward: The build was broken.
+woohoo! fouth time's a charm
+morning
+seanh: I think I'm ready to merge the docker pull request in.
+It's not perfect, but we can shape it later.
+nigelb: Alright with me, I got stuck on it not working cause of my docker version, will try again later. I think I will have lots of PRs against it but that's fine
+yeah
+I want the docker version mentioned.
+That's a stumbling block.
+Otherwise, it looks okay.
+Anyone fancy clicking the merge button on https://github.com/ckan/datapusher/pull/36
+hi
+email setup
+nigelb: Why is that showing 5 commits?
+seanh: that's weird.
+Let me create a new pull request quickly.
+I'm able to connect to my SMTP server "manually". When I try to do so via CKAN (via a paster command for send_email_notification) I get errors. I've checked the credentials *several times* in my .ini file - they're correct. But I see the following error in the stack trace that's produced:
+ Action function send_email_notifications did not call its auth function
+which, while I understand what it means in English, I have no idea wtf it means in a CKAN context
+I think that's a known CKAN bug. Let me check if we have a fix.
+aha: https://github.com/ckan/ckan/pull/1767
+right
+yup
+we'll be release ckan 2.2.1 soon
+and it should have the fix.
+(it doesn't yet)
+so I guess I need to wget the endpoint and avoid paster..?
+in which case, your instructions for how to set up the cron job for pushing emails are wrong/broken (just saying)
+agreed.
+Oh
+your instructions make use of paster
+ntoll: You mean, even after fixing the actual issue?
+Right, that's because we missed this bug.
+quite
+just saying :-)
+The true fix is backporting this fix into 2.2.1
+I'll even try to do it today.
+right
+but in the meantime I'll just have to wget/curl/whatever
+cheers
+np
+thanks
+seanh: https://github.com/ckan/datapusher/pull/38
+nigelb: So does simply removing the OKF theme submodule make it use the default theme? Don't you have to change something in the sphinx conf file?
+The files changed diff seems wrong on github
+seanh: apparently I can't get this right :)
+sigh :)
+seanh: I think I got this one right https://github.com/ckan/datapusher/pull/39
+:)
+Merged
+thanks
+Experimental Docker support for CKAN has been merged into master now: https://github.com/ckan/ckan/pull/1755
+Issues have the Docker label https://github.com/ckan/ckan/issues?labels=Docker
+Contributions welcome!
+hopefully our whole meeting tomorrow won't be consumed by docker issues :-) I want to talk about json-patch and the package_patch api
+seanh: w00t!
+I don't think the issues need much discussion, I just hope we have time to work on them, there's a fair bit to be done before the docker install can actually be used in either development or production
+It's already the best/quickest/easiest/most-cross-platform way to install CKAN if you just want to try out CKAN, if you don't need the DataStore/DataPusher, but that's all it is at the moment
+It does make zero-to-running-CKAN-on-port-80 into a one-liner (if you run the three commands together onto one copy-pastable line!) which is quite cool
+indeed
+Well, you need to install Docker first I guess, so not quite
+nickstenn: Why does the Dockerfile install build-essential in the docker container? Is that needed to install/run CKAN?
+seanh: it *was* needed to compile some of the stuff in requirements.txt
+I wouldn't be willing to guarantee that it's still needed
+psycopg2 possibly
+wardi: ah, certainly psycopg2. does lxml end up installed?
+it should be possible to use the packaged psycopg2
+I guess that's one advantage of the package install: You build the package on a build server, then you only need the stuff to run CKAN on the production server
+seanh: we can do that in the docker image too if we want just by removing those packages after build
+So how can I get an interactive shell, in the docker container? Trying to docker run anything seems to give no such file or directory
+its important to realise, though, that the main reason to be worried about having compilers on a server is at least partially mitigated by the fact that CKAN runs in its own container
+Surely that just changes "my server has been compromised" to "my container has been compromised" which is basically the same thing
+seanh: http://docs.ckan.org/en/latest/maintaining/installing/install-using-docker.html#running-maintenance-commands
+seanh: it's not "basically the same thing"
+your container doesn't have access to most of what's on your server
+If all you're running on your server though is one CKAN site in a docker container, it's amounts to about the same thing doesn't it?
+Anything else running on the same server has a level of protection, I understand
+seanh: still not true
+I can't see the sshd running on your server from within the container
+i can't see /etc/shadow on your server from the container
+I'm not saying containerisation saves you from all security worries (it *certainly* doesn't) but it's very likely to be better than not having it
+Sure
+if the question is "should we have build tools in the container" the answer is definitely "no"
+but is it the end of the world? no
+nigelb: did you get a chance to add the autobuilder to the docker hub?
+Where does $DB_ENV_POSTGRESQL_DB come from? Are those the env vars created by the --link db:db?
+seanh: correct
+nickstenn: no, I can do that now.
+nickstenn: done.
+Uhoh, did github finally remove the ability to turn issues into pull requests? It's not working for me
+seanh: I got an error but it still worked last time
+people using duplicate and order-sensitive keys in json objects makes me sad
+They were going to remove it.
+I didn't even know json objects could be order sensitive.
+I thought of them like python dicts.
+yup, in javascript they don't work either, but the json spec doesn't explicitly disallow it in json, so there are libraries that use it
+* nigelb facepalms
+I want to be able to say "that
+'s not json"
+I want to use json-patch for the request to have only certain fields returned from our _show and _search apis
+nigelb: \o/ (ty)
+and ckan/tmp is now gone
+denisz: rgrp was bugging me about letting #1679 sit, if you're wondering about the comment-storm
+(I mean "bugging" in the nicest way, I had let it sit too long)
+Hi! Could anyone tell me if CKAN version 1.8 is still provided with security updates (hotfixes)?
+hi, what are valid values (and syntax) for ckan.email_notifications_since setting in the foo.ini file..?
+ntoll__: http://docs.ckan.org/en/latest/maintaining/configuration.html#ckan-email-notifications-since
+seanh, that should be linked from the maintainers docs... Google didn't return ^^^^
+It is in the maintainers docs, dunno about google though
+seanh, in the end I just looked at the source for string_to_timedelta ;-)
+seanh, right... but not linked from the email notifications section I mean
+Always the most reliable method anyway :)
+Ah yes, that would be worth fixing in the docs, it should be cross-reffed
+seanh, +1 :-)
+just one quick question
+i was using ckanapi
+and was trying to upload a file
+but i keep getting ValidationError
+which says there is a value missing in the url
+and the url i am using is
+http://localhost:5000/
+just this much
+... we probably should fix that
+[travis-ci] ckan/ckan release-v2.2.1 18eaeea http://travis-ci.org/ckan/ckan/builds/28478525 David Read: The build was broken.
+ah dang.
+http://pad.okfn.org/p/ckan-meeting
+https://plus.google.com/hangouts/_/event/cb1vmkss426lkqicj94a3amvd1c?authuser=0&hl=en-GB
+nigelb: ^
+vitorbaptista_: ^
+https://docs.python.org/3/library/unittest.mock.html#where-to-patch
+rgrp: is https://github.com/ckan/extensions.ckan.org/blob/master/data/extensions-gh.csv the best current bet for a comprehensive listing of extensions?
+yes - just trying to make a proper site ...
+but yes ...
+want to keep adding to it ...
+Need to mark status for them, comments for example is WIP
+rossjones: i know - there is also a gdoc version which is editable ...
+and some may no longer run with recent versions
+davidmiller: see https://github.com/ckan/ideas-and-roadmap/issues/22
+where?
+inventory-template is php, and extremely DGU specific
+here's the gdoc editable version ... https://docs.google.com/a/okfn.org/spreadsheets/d/1izCpljO6Et7zLUKcUlB4BzsMZTurENp56Iqi9kXOtgs/edit
+rossjones: if you could add to that please do - plus new columns ...
+actually think we probably want to run off that ...
+rossjones / davidmiller if you wanted to help out there are some issues now here https://github.com/ckan/extensions.ckan.org/issues :-)
+rgrp: The Google Doc already meets the criteria from your two user stories perfectly.
+* davidmiller <3 Less Code In The World.
+davidmiller: it does need to be kept up to date ...
+plus i don't think it is very findable - i don't think a google spreadsheet is great medium term esp for discoverability ...
+so i do think we probably want extnsions.ckan.org and super easy to implement (probably 1h)
+davidmiller: plus we do need to regularly trawl for new extensions ...
+but sure - this isn't bad and maybe extensions.ckan.org could just link to a gdoc to start with - that's a good home page pr ;-)
+rgrp: Moar seriously, there are other places e.g. https://bitbucket.org/repo/all/relevance?name=ckanext
+woo! I have ckanext-scheming with a really simple dataset schema actually sort of working
+wardi: :o)
+* amln hopes ckanext-plotting will follow, shortly…
+that is what -basiccharts should be renamed to
+I wonder what ckanext-conniving could be
+wardi: I think we could rename searchhistory to that.
+considering it does tracking of what you're looking for ;-)
+I briefly considered calling it ckanext-nsa. "It only stores metadata about your searches!"
+the harvester could be ckanext-colluding
+wardi: not to rehash a discussion, but I can't rename repos on GH/ckan
+amln: oh, I wasn't serious about any of those :-)
+amln: any of the core developers can rename things if you need
+i was being sarcastic ;)
+good, good
+hi guys
+hello folks.   i'm working with CKAN 2.2. whenever a data resource (XLS) is uploaded to the filestore, it is automatically pushed to the datastore. however, during the conversion of each column, the data type is guessed incorrectly. for instance, decimal numbers are converted to integers, thus removing all of the digits after the decimal point (.). the documentation says i could specify the field for each column, but that is o
+is there any workaround to this problem? i really need to use the datastore.. so it must be pushed :(
+[travis-ci] ckan/ckan master ffdd089 http://travis-ci.org/ckan/ckan/builds/28413457 amercader: The build was broken.
+joet: don't suppose you've had a chance to look at https://github.com/ckan/ckan/pull/1786, have you?
+no i haven't though if dread is happy with it i've no objections with merging
+nickstenn, ^
+cool, cheers :)
+If I set domain='' (param to Pylons set_cookie() method) then in Firefox it shows up as host localhost. I guess that's the default in the spec/browser. CKAN's session cookie is the same and it gets sent in the next request, but mine doesn't :(
+Still no luk
+seanh: but does that actually send a cookie without a domain?
+nickstenn: Dunno
+or does it just sent a cookie with "Domain="?
+seanh: look at the Set-Cookie headers on the response in the developer tools
+For cookies to localhost to work, you'll need to send a Set-Cookie header without a domain specified
+as I said, I get three back from login_generic
+only one of them gets set by the browser on the next request, and it's the one without a domain set
+I'm gonna have to get going, will have to come back to this later. I can't believe it's so hard to set a cookie! Will look into exactly what's in the Set-Cookie headers next. Maybe I'll try falling back on the stdlib Cookie module as well
+so, datapusher
+should the default datapusher plugin config push data to the datapusher configuration by default on upload?
+and if not, is there a button I can push or a setting I need to set to make that happen?
+* nickstenn is playing with datapusher in the same container as ckan
+ route exists and works, and I can manually click the "Upload to DataStore" button, but it doesn't seem to happen by default.
+nickstenn: if the datapusher is working, it shoudl automatically upload csvs and excel files to the datastore
+there is a tab on the resource admin page to fire it manually as well
+let me look for a link
+amercader: okay -- any idea how I can debug the fact that it isn't happening automatically?
+nickstenn: On the datapusher side I think there is a datapusher option for defining  a log file
+on ckan I guess it's pdb somewhere around here https://github.com/ckan/ckan/blob/master/ckanext/datapusher/plugin.py#L93 :)
+amercader: thank you -- I'll have a poke around
+ugh. ckan-service-provider. ugh.
+nickstenn any thoughts on which queue you'd replace it with? is rabbitmq a necessity?
+I mean it's a lot of install just for this particular feature, especially if you're not using harvesting
+rossjones: not sure if you got that last... either rabbit or redis, and I probably have a mild preference for the latter
+Cool.
+Can also abuse it for sessions :)
+mild preference for redis as it's simpler to administer and can also be used as a kv cache
+exactly :)
+rossjones: harvesting != ckan-service-provider
+also harvesting supports redis backend, which gives better results than rabbitmq
+amercader I know, but harvesting uses rabbit no? Was suggesting if you don't need rabbit (because you're not running harvesting) then it's a lot to install just for datapusher
+oh, didn't know it worked with redis.
+I need to update the docs to recommend it rather than rabbitmq
+Actually I did know that, I switched the celery queues on DGU to use redis. Old age == forgetful
+rossjones: you don't need rabbitmq for datapusher
+amercader I know, and I wouldn't want rabbit for datapusher (which is what I was asking)
+all happy then!
+not really, don't want ckan-service-provider either :P
+but redis seems a nice compromise
+http://aphyr.com/posts/283-call-me-maybe-redis
+amercader: well except for the fact that (as I keep saying) we have a shit reimplementation of half of celery in the form of datapusher, with weird upside-down dependencies to ckan-service-provider
+this guy kicks the snot out of pretty much every queueing system out there
+Also http://antirez.com/news/55
+wardi: lol, do you want me to ask Kyle to evaluate datapusher's queue implementation?
+nickstenn: touche
+wardi: and it's also very important to note that Kyle was investigating redis's *distributed* queue feature, Sentinel
+let's use smtp and procfiles for queueing
+smtp? +1
+not the use of a single redis server and a redis LIST datastructure as a FIFO queue
+nickstenn: so you like redis in a non-distributed set up?
+there are many different ways of using redis in a distributed way, and not all of them require internode communication
+(i.e. sentinel)
+I will make one claim, which is that whatever the failure modes of single-node redis as a queue, the failure modes of whatever ad-hoc bullshit is in datapusher are worse.
+Eww, in the Firefox dev tools all my cookies are run together in one string, with no separators. Like: Set-Cookie: mycookie=myvaluemyothercooker=myothervalue
+That's weird, I don't see how the browser can tell where one cookie ends and another begins, but it might just be a Firefox dev tools thing...
+that doesn't sound right
+it *might* be a display issue, but I doubt it
+But looking at the actual cookies in ff, I'm not seeing the name of the next cookie running into the value of the previous, so I'm thinking it's a display issue ... Let's try with just one cookie
+amercader: still stuck on this datapusher stuff
+how is "ckan.datapusher.formats" used, and how are the formats determined
+there's nothing in the datapusher logs from an upload of a CSV
+but I don't know whether I need to explicitly declare the format, or predefine some formats, or what
+ahhhh
+nickstenn: there are some default formats defined I think https://github.com/ckan/ckan/blob/master/ckanext/datapusher/plugin.py#L16
+okay, so if I explicitly set the format in the format field it works
+nickstenn: maybe some dodgy logic here:
+https://github.com/ckan/ckan/blob/master/ckanext/datapusher/plugin.py#L84
+that looks ok to me
+I think what I was missing was that I had to explicitly declare the format when I uploaded the file
+I didn't realise that CKAN doesn't sniff the filetype
+nickstenn the qa extension does, but it isn't inline.
+okay, in which case, I now have a fully dockerised CKAN+datapusher, with sessions in the database
+woop!
+not determining the filetype (on upload) annoys me, a bit too :o(
+nickstenn: Well done
+amln, nickstenn: the file type is guessed for resources, at least on uploads
+not sure about lnks
+ah, it's on master, not 2.2
+https://github.com/ckan/ckan/pull/1350
+So looking at the standard CKAN session cookie, the Set-Cookie header has path=/ and no host. But my cookie's Set-Cookie is exactly the same as far as I can tell, and the browser doesn't send it back on the next request :/
+I remain baffled by this, and it doesn't seem to be CKAN/Pylons's fault since the Set-Cookie headers look exactly the same in Firefox dev tools but one cookie works and the other doesn't. This is just one of those days
+Hmm, ok
+When I load the login page there are actually many get requests of course, to get all the images etc
+The initial get for the /user/login html contains my set-cookie
+Further gets for images etc contain my cookie in the request -as it should be
+Then at some point, there is a get for /en and the response to that contains a Set-Cookie for my cookie that sets it to an empty string??
+Which has the effect of deleting it hence when I load another page, it's gone
+But afaik it's not my code that is doing that - I only set the cookie in one place, and not to the empty string, and that line of code executes once during the whole page load not twice
+When I said "it doesn't seem to be CKAN's fault", a part of me knew
+My cookie was called "ckanext-oauth2waad-state". If I change its name to something that doesn't start with CKAN, it works. My cookie is now called "fuck_ckan". This cost me half day. I will find the line of code responsible for this...
+Well, that didn't take long: https://github.com/ckan/ckan/blob/master/ckan/lib/base.py#L355
+hmm. kind of like me learning yesterday that nose runs any method with "test" anywhere in the name, and then fails with a useless traceback..
+Does CKAN by default create any cookies other than the "ckan" cookie? I didn't think it did, but that line of code specifically looks for cookies whose name starts with "ckan" but that are not the "ckan" cookie and deletes them
+my namespace. mine! maybe there were some old auth cookies that the committer wanted to remove
+https://github.com/ckan/ckan/commit/5a1734a4fed955deda27242f12e401806624852
+at least there was a smiley
+I don't know why it was, but it seems a really bad idea to delete all cookies that start with CKAN. If there were specific cookie names that you wanted to delete, maybe
+Well, I guess I can implement my CSRF protection now, just stick the GUID in a cookie in the user's browser, no need for anything db side. Right now I need a drink though
+seanh: fuck me that's horrible -- well found
+if you can be bothered I'd strongly suggest a patch to remove that code
+nickstenn: Don't worry, I will murder it
+This is why I defend our conservative approach to code review, rather than a merge it quickly and deal with the consequences later
+There used to be a time when I would run across an issue like this in CKAN that would cost me hours a few times a week, and not only in old legacy code but in new code that people were actually adding
+That changed when we moved to github and put in a process of pull request, code review in the open on the pull request, and then merge, and we started being quite tough with each other on the code reviews
+The difference between now and my first year or so working in CKAN, is like night and day
+The number of times I swore to myself I would quit simply because working with this sort of code all the time was so infuriating
+Nowadays, there are still lots of these things hiding in CKAN but you come across them every few weeks not every day, and I think few if any new ones are being added
+seanh: that's fair enough, but that has to be tensioned against getting contributions from people outside the core development team
+(Before github, the code review would be done in private with the reviewer on skype)
+i.e. if they perceive conservatism as stubbornness, they'll go away
+Also, that particular bug, came from a hacky branch of code that was only meant to be used on demo.ckan.org and then at some point got merged into master presumably with little or no review ... I doubt that would get in, today
+There's a balance, I agree, but I also maintain that we've never had a pull request from a new contributor who's then gone away because we were too tough on the review. A couple of times with contributions that we seriously didn't want, but never with anything potentially beneficial as far as I know. We always try to be as encouraging as possible
+I do think it's possible that the contributing guide in the docs puts people off (and we never hear about it) though - that thing has grown a little out of hand, it's too long
+if people read it
+True
+hey guys. i'm working to get a custom form up in CKAN for a totally different need (not related to the packages, resources etc..). where should i start? I could create the form, but I dont know how to create the 'controller' class
+sorry; d/ced earlier. if there were any replies, please re-paste for me please :)
+Start with the IRoutes plugin interface
+Setup some routes that go to the controller class from your extension
+And your controller class itself should probably subclass ckan.plugins.toolkit.BaseController
+This extension has some custom controllers for examples: https://github.com/ckan/ckanext-datapackager
+Implementing CSRF protection in ckanext-oauth2waad is harder than I thought
+We have to generate a GUID that goes in the URL params when we redirect the user's browser to the OAuth server, this GUID goes as a URL param in a "Login with OAuth" link on the login page (a new GUID is generated each time the page is loaded)
+The user goes to the OAuth server, logs in, and the server redirects their browser to make a request to CKAN with the same GUID in the request params
+And we have to check that the GUID we receive is the same as the one we send
+THe problem is you can't just store the GUID in the session because once the browser goes to the auth server and then comes back to CKAN, it'll be a new session
+So we have to store them somewhere else ... And also if many users visit the login page at the same time they'll generate many GUIDs and we have to store all the ones that haven't been used yet, and probably have to expire unused ones after a time
+Basically we're gonna need a db table for this I think
+seanh csrf across servers seems a bit strange/pointless?
+rossjones: It's part of the OAuth 2.0 spec. I don't have a great head for security issues to be honest but it did seem a bit silly to me
+The point is, I guess, that some malicious website could generate links to our OAuth 2.0 redirect URI and trick users into clicking on them
+If our redirect URI will only work if the request to it contains a GUID that we generated, then we know the user is coming to our request URI after clicking on a link from our website (they click on a link to the oauth server on our site with a guid in it, go to the OAuth server and login, server redirects them back to our site again with the same guid in the requeast)
+It seems that if a man in the middle can sniff the guid in the first request then they can fake the second one. But that is "beyond the scope" of the OAuth 2.0 spec I think. They're both https requests though
+The easiest way would be if I can store it in the browser instead of in the db. Set the GUId as a cookie in the user's browser, but a cookie that persists when they browse away from CKAN to the auth server then back to CKAN  (which Pylons session items don't by default). Also need to know that malicious websites can just store their own value in the same cookie
+seanh: can't we store any more details than the current ones when creating the ckan user in ckanext-oaut2waad? There is nothing right now that links to the email used to login in the waad server
+We only store fullname afaict
+User name and full name are all (that's interesting) that we get back from the auth server
+I see, the oid thing is from waad
+Maybe we can make another request to the platform API itself to get more details about the user? But that would be separate from the auth server
+Yeah WAAD actually sends several unique IDs for each user, the OID seemed like the best choice
+WAAD only knows about username / password. the email addresses etc are in Metadata Services API
+seanh: the email would be quite handy, as this is the actual user name on the platform
+s/are in/are exposed via/
+Right, so getting more user info from Metadata Services API into CKAN is a separate feature, imo. Not sure if we'd implement that in ckanext-oauth2waad or elsewhere, it's not really a waad thing I think
+seanh: no, it's a project thing
+CKAN actually requires user accounts to have emails which is a problem because the WAAD server doesn't give us emails. Currently I'm setting each user's email address to "foo"!
+It won't be so portable. AFAICT, WAAD only stores username/password.
+But a real fix would be to make CKAN accept user accounts without emails, either by a CKAN core change or by overriding the validator functions from our extension. Not sure if anything in CKAN would break if it hit a user with no value for their email address
+as part of the login process, for Glasgow, we should be (a) hitting WAAD for U+P, (b) hitting metadata/identity services API for the profile info (including organizations), caching those in CKAN's usual place, bingo.
+let me find the diagram we drew...
+seanh: we still want emails for this users, we'll just hopefully gt them from the metadata api on user creation time,
+anyway, this is probably for #commercial
+:)
+amercader: But ckanext-oauth2waad is creating the users, and we don't want to tie ckanext-oauth2waad to the Metadata API. So the oauth2waad needs to provide some sort of hook that a Metadata API plugin can hook into to get the email address and insert it into the user that we're going to create?
+seanh: custom user_create on the project extension that wraps the core one
+I suppose that would work, yeah
+It needs to somehow know when you're creating a WAAD user vs when you're just creating a normal user, but otherwise it should work fine
+"if you have a weird name and foo for email it's a waad user" :)
+we will disallow ckan user creation anyway eventually
+FYI: I'm probably going to miss the dev meeting.
+nigelb: have some rest!
+somewhere there's a user story about CKAN creating accounts against the WAAD. I think it may be I4.
+http://pad.okfn.org/p/ckan-meeting
+https://plus.google.com/hangouts/_/event/cb1vmkss426lkqicj94a3amvd1c?authuser=0&hl=en-GB
+good lord I need a haircut
+so I'm not entirely convinced by the SQL that set-permissions uses to set permissions for the datastore database
+i just created a new database, and three new users (ckan, datastore, datastore_ro) in a blank postgres instance
+I then ran the set-permissions sql (manually)
+Then ran "paster db init"
+and I'm getting the following when trying to upload a dataset:
+ProgrammingError: (ProgrammingError) permission denied for relation _table_metadata
+'SELECT 1 FROM "_table_metadata" WHERE name = %s AND alias_of IS NULL' (u'e3ae13f3-70a1-4b4f-958d-263755f17cd8',)
+And indeed, if I look at the permissions on that view:
+public | _table_metadata | view |                   |
+which is bloody weird
+because the view was created by the datastore user:
+ckan_datastore=# \dv
+List of relations
+Schema |      Name       | Type |   Owner
+--------+-----------------+------+-----------
+public | _table_metadata | view | datastore
+nickstenn did you check the sql? last time I saw one it was a template
+rossjones: I'm currently trying to work out if it does the right thing
+ALTER DEFAULT PRIVILEGES FOR USER "datastore" IN SCHEMA public
+GRANT SELECT ON TABLES TO "datastore_ro";
+^^ this line should ensure that that view has read permissions for the datastore_ro user
+but apparently it hadn't taken effect when the view was created
+which clearly means I'm missing something, because I ran the set-permissions SQL before I ran db init...
+this doesn't make any sense at all :(
+ahhhhhh, hang on a minute
+ALTER DEFAULT PRIVILEGES appears to apply to a particular database implicitly
+hooray!
+so that script has to be run while connected to the datastore database, not the main ckan database.
+It looks like CKAN (or maybe Pylons) clears the Beaker session on each request when no one's logged-in
+And when used in a WSGI app Beaker's WSGI middleware creates a single session object and inserts it into the wsgi env - so there's only one beaker session
+So if you want a persistent cookie for browsers that are not logged-in, you can't use the beaker/pylons session
+nickstenn: re drunkenly rewriting cli.py, I'm happy to buy you beer for the cause
+Sigh, still just trying to set a cookie and get it back in the next request. The pylons.response object has .signed_cookie() and .set_cookie() methods, but even though I use them and I can see the cookie in my browser with the right domain, path='/' and an expires time in the future, the browser doesn't send the cookie back in the next request
+seanh: is the cookie marked secure?
+Yep
+are you connecting over TLS?
+I'm wondering if it's to do with CKAN running on port 5000?
+Yeah
+I an mark the cookie as secure or not, doesn't help
+You are? Huh. No idea, then.
+Yeah I'm kind of stumped as well
+Gonna try running CKAN on localhost port 80 and see if that changes anything
+seanh: port 80?
+are you sure you're connecting over TLS...
+Yeah
+in theory at least, cookies aren't bound to ports
+Actually I doubt the port is gonna help
+and a cookie should (or could, at least) be sent to any port on a given domain
+it's not an IP vs domain thing?
+It seems to be that Firefox doesn't obey the path setting in the cookie, it sends each cookie back in the next request *if* it's a request for the same page, but a request for any other page doesn't contain the cookie, regardless of the cookie's path
+You mean 127.0.0.1 vs localhost? I've tried it both ways
+seanh: that sounds like the cookie just isn't being stored
+ahhh
+If I go to browse my cookies in Firefox, it's there, and with all the right settings
+iirc setting domain on localhost cookies doesn't work
+But if I look at the next http request in Firefox, no cookie in the headers
+Hmm
+either don't set the domain, or add an entry to /etc/hosts with at least two dots in
+and use that as your domain
+Can I just use 127.0.0.1?
+Ok, I'll try an empty domain in the cookie for now...
+seanh: see http://curl.haxx.se/rfc/cookie_spec.html and search for "domains must have at least"
+But then how come CKAN's normal session cookie works?
+good question
+when I log in locally, I get three Set-Cookies from login_generic
+one without a domain
+one with a domain of localhost:5000
+and one with a domain of .localhost:5000
+I want to add a newsletter and SMS notifications (based on the data whereas newsletters would be like  blog posts) related to my CKAN instance. Any suggestions? Would be awesome to do it all the user management in CKAN but I'm not sure if that's more viable than adding this to WordPress
+SkramX: an extension that hits Mailchimp/Sendy/Twilio APIs, maybe?
+right.. im trying to decide if i should be extending CKAN or maybe instead extending Wordpress/whatever blog we choose
+wondering if anyone had something like that that already existed
+SkramX: ckanext-pages gives you a blog inside CKAN
+Not SMS notifications though
+yeah
+the researchers im working will see ckanext-pages and want so much more it makes sense to have a separate blog
+appreciate it though!
+There is an email notifications feature in CKAN, where you can get an email when there's new activities on your dashboard, a plugin could potentially add SMS notifications to that
+It could also just be an API client that sends out SMS messages
+interesting
+the SMS will be based on datastore-data
+so i could maybe extend the activities to include those notifications and then add SMS
+can user accounts have additional metadata such as user location? i want to only notify them based on their location
+this is all about air quality so obviously they only care about air quality near them
+amercader: were you working on user extras? ^
+is solr on travis just broken now?
+(did they change their base image again?)
+oh. what happened to our coverage
+wardi: not yet, we may need it for a current project soon though
+wardi: what's wrong with the tests? random solr connection issues
+?
+amercader: I thought they became less random, but no, just the usual occasional failures
+wardi: What's the status with CKAN and scaling these days? I remember it was having problems around about the hundreds of thousands of datasets scale, with adding new datasets getting too slow and also certain pages loading too slow, but can't remember what become of it
+amercader: What happens if you try to use the CKAN harvester to harvest from CKAN sites that have different custom schemas? Does it just pull in the basic metadata and basically ignore extras and custom fields?
+seanh: with the new db indexes it works well enough for us with 180k datasets.. but we don't use the user dashboard (I think those are one of the remainaing trouble spots) and probably a few other core pages
+we also disable 20 or so actions because they're too slow for us
+wardi: just curious, who is "we"?
+But you're not using any patches on top of ckan core anymore, to get acceptable performance with 180k?
+I imagine to get it working with millions, would still be quite a task
+SkramX: data.gc.ca
+cool
+seanh: I've pushed all our performance-related stuff to core
+seanh: the current implementation of the ckan harvester queries the old rest api, which does not support custom schemas anyway. The plan is to refactor it to use v3 (to support filtering, etc). In this case I guess we will use the "_validated_data_dict" =  False or similar that wardi added a while back, to get all custom fields as extras
+what's the status on user extras (for the UI and DB, not for harvesting)
+seanh: internally we're building a much larger ckan instance, so hopefully we'll have more performance fixes to contribute too
+amercader: I guessed it was something like that. So you can harvest from hundreds of different ckan sites even though they all have customizations, and you'll get something vaguely sensible out of them
+wardi: Cool, what kind of scale?
+I think scaling CKAN to millions of datasets or more would be pretty interesting technically, probably a big task though
+seanh: http://tla.mpi.nl/tla-news/ckan-tested-2-million-datasets/ may be of interst
++e
+seanh: they have about 60k datasets but each one has ~100 fields, some of them very large, and it's just growing from there
+that's the most recent thing I've seen
+but I'm not working directly on that project, so I don't know that much about it
+thanks
+Hmm, I wish they had info about how different CKAN features perform with two million datasets, not just how long it takes to import them
+Two weeks just to import two million into the db makes it hard to experiment with this stuff, and if the import time is still non-linear then playing with tens or hundreds of millions is just impractical even to test
+seanh: ask for more info?
+if they did test the rest of ckan they would switch their answer back to "No"
+it'd be nice to know if they ran test searches and stuff. Be nice to know how the current solr setup holdsu p
+solr doesn't have any problems
+it's all the other (often unnecessary) stuff we're doing in the action functions
+I remember people also alluding to some fundamental problems in the model/database design
+And I guess revisions are probably a problem
+very much so
+I think I am going mad.  If I modify default_resource_schema() it starts failing because 'created' is a datetime and can't be serialized.  Anyone seen that before?
+rossjones: hmm. isn't default_resource_schema used in a few placed in different ways?
+used for show and update as far as I can tell.
+Doesn't help you can add random things to the html and it'll get auto-added as extras without your validators running :(
+* rossjones spent an hour looking at why his validators weren't running.
+rossjones: the dataset validators still get run. maybe add something in one of the magic ones like __before
+I forgot to do the schema['resources'] = resource_schema
+:(
+or remove the thing that automatically accepts the extras in resources
+Now I have, it dies
+when it tries to index the package :(
+or rather when it tries to dump validated_pkg_dict as json
+hmm. does the api controller customize the json dump to support datetimes?
+if so that code should too
+Weirdly, it is the MissingNullEncoder which causes the problem with a datetime being given to it.
+Needs an if instance(obj, datetime.datetime): return obj.isoformat() - fixed it for me.  building a repro for test will be a pain :(
+I'll log a ticket, but I'm gonna have to go with a monkeypatch for now :(
+rossjones, check which json library you are using
+json and simplejson don't like each other at times
+it could be somewhere in the code, the two have got mixed together
+joet don't think either of them will serialise a datetime will they? Think it's more likely that: a. I've done something stupid, b. there's a bug in the validation
+in that order probably
+sorry missread, thought you had an error from json encoding the Missing object
+:D
+SkramX: no, but that sounds useful :-)
+:)
+"soon we will" https://github.com/ckan/ckan/commit/3e7f6900#diff-ff0f992e623eb10f5f87fe4684ed15cdR8
+rgrp: check out modeanalytics.com - looks like they are doing something similar to ckan explorer but having nothing to do with CKAN
+SkramX: actually i've chatted quite a bit with them a few months ago re Data packages, json table schema and the like so we know about it ...
+ah okay - just making sure
+SkramX: but thanks for the pointer :-)
+it's also very similar to my "fork" of your ckan-explorer at louisvilleairmap.com/wizard
+SkramX: wow that is looking nice :-)
+thanks. its all open source! dirty code modifications off of your ckan-explorer and more!
+i need to figure out a way to make querying friendly for non-SQL people but i think i want to ultimately keep it using SQL as it is the most robust way to query
+SkramX: what you really want right is to be able to save the "views" config you create back into ckan somehow (i.e. you want to save the query plus visual config ...)
+yeah
+SkramX: it would be pretty easy to create a query builder there using some basic stuff
+for where statements, yes
+SkramX: you would be interested in https://github.com/ckan/ideas-and-roadmap/issues/7
+when i start to think about group by and stuff my head starts to hurt
+yes - very
+SkramX: it would be really easy really to save stuff via a ckan extension ...
+but since i am not CKAN-savvy still i am building this outside of it
+:\
+for example, when you query and go to a different multiview view, it updates the URL hash and you can go back to it or even embed it
+SkramX: right but you'll need to persist the view config somewhere right ...
+right - ckan would be a good place to do that
+SkramX: ah ok - you're persisting into the view config - i did that originally with ckan data views ...
+right now the view config is a hacky use of URL params :-\
+not a bad a approach though it can get a bit painful and it would be nice to e.g. list views people have created ...
+yeah
+well for now we can have a list of URLs
+https://github.com/marks/airqualityegg.com/blob/data-viz-wizard/public/assets/js/wizard.js is the code
+this is all very MVP / let's get some basic functionality together to have something to show
+SkramX: definitely the right approach
+i figured ckan views were being rapidly developed by others and i needed something to show *now* so I'm hacking this up. If others can use it awesome but you all will probably come up with something way better and ill adopt it and add the features i need on top
+i'll think some more - but please do add a +1 on https://github.com/ckan/ideas-and-roadmap/issues/7 and maybe mention your use case for it
+will do!
+btw - have you seen the ckanext-odata? I am super excited about that -- letting people use Tableau to access CKAN data
+completely personal opinion: I am underwhelmed by Mode so far. Basically CKAN datastore + your ckan-explorer, rgrp
+yikes! I just did a catalog query and got a list of all their current user's tables.
+SkramX: yes i have seen ckanext-odata and very happy about it :-)
+:)
+ill be contributing more to it but we fixed something (yay collaboration) to make it work correctly Tableau.
+which also reminds me that i need to move forward https://github.com/ckan/ideas-and-roadmap/issues/22
+very nice
+rgrp: fyi, I just added ckanext-odata since I didnt see it on that list. didnt touch columns I wasn't quite sure about :)
+perfect - atm it sort of gets auto-generated but that is perfect ...
+if you need help going through to test or better document them, let me know. we're benefitting from CKAN and trying to contribute back but happy to do so in other ways too
+just putting that out there
+SkramX: that would be really useful - give me a mo - i'm just booting a repo for the extensions stuff right now which will have the plan more clearly
+sure thing - ill be back in a bit. lunchtime here in USA
+Anyone any idea what happened to the old python lib for using the ckan api? I can find github.com/ckan/ckanapi but this is wardi's version.
+https://github.com/okfn/ckanclient-deprecated
+hey guys
+i'm trying to upload a large resource file into my CKAN v2.2
+of about 140mb. i've tried adding and changing the ckan.max_resource_size and ckan.storage.max_content_length variables in production.ini, and restarting the server
+however it still doesn't accept the 140mb file, giving a 413 error: request entity too large
+what should i do?
+oh im also hosting through nginx
+clemi: try setting client_max_body_size 500M;
+thanks! i've found that the problem is with that ngix and not CKAN
+i've added it under the http scope .. http {... client_max_body_size 500M;  ..}
+reloaded the nginx service
+but to no avail
+:(
+clemi: this suggests putting it under server { ... }
+http://docs.ckan.org/en/latest/maintaining/installing/deployment.html#create-the-nginx-config-file
+got it! thanks so much for your help.
+clemi: glad you got it working
+:)
+nigelb (and seanh, wardi, etc): I've been collecting tips and guidelines for managing releases branches here:
+https://github.com/ckan/ckan/wiki/Release-branches-tips-and-tricks
+in case I got hit by the proverbial bus ...
+aaaaargh
+why does subclassing CkanCommand and loading the config file try and connect to the sodding database?
+oh wow
+and now I've discovered that we parse the database url with a regex in ckan.lib.cli
+hooray
+nickstenn: is it that adorable 'oh have we created a site user yet?' bit of code?
+wardi: yes
+please kill it
+exactly
+I don't think I understand what it's doing or what uses it
+it's making a special admin account at the wrong time
+wardi: and you reckon that none of the extant commands depend on it?
+no, i reckon we should create the site user as part of setting up the db
+instead of checking for it just before running a command..
+right, so it should just move into initdb?
+maybe. i haven't visited that part of the code yet
+ok
+cheers
+Damn, it seems I can't do a flash message from the login() method of my IAuthenticator plugin?
+I can call helpers.flash_error() but nothing happens
+so the real culprit for connecting to the database when just initializing the pylons app appears to be deep within a plugin somewhere
+i'm going to ignore that for now
+nickstenn worth a ticket so it doesn't get forgotten?
+rossjones: good call
+You don't fancy having a go at https://github.com/ckan/ideas-and-roadmap/issues/30 whilst you're trawling through the code ? ;)
+rossjones: https://github.com/ckan/ckan/issues/1785
+rossjones: erm
+gowon gowon
+not *right* this moment, :)
+Ok, so flash messages are broken in CKAN
+As in, none of the flash messages are displaying, ever
+Also, if my IAuthenticator plugin tries to show a flash message from its identify() method it ends up showing the same message three times, because CKAN calls each plugins' identify() three times per request instead of once!
+I think nickstenn and I are having the same typical CKAN experience: You try to do one thing (my authenticator plugin needs to flash an error message if authentication fails) and you end up having to fix one thing after another: displaying flash messages are broken in CKAN, fixed, ok, the authenticator plugin interface is broken in CKAN, fixed, ah there are no tests for this.. Oh and no docs either...
+tell me about it.. i've been yak shaving for months
+at least we end up improving things on the way (ideally)
+christ, ok -- so I've just worked out that I actually can't have --arguments to a paster command
+because paster eats all the --options for itself
+Wow, looks like aliceh75 goe there before me: https://github.com/ckan/ckan/commit/f3558a8f1c3659bf8c4f4c8b5062343a9e55d533
+rossjones: I'm glad you raised that on 1 Apr.
+davidmiller nobody noticed.
+Let's say I have a dataset, and want to transfer ownership - e.g. move it into an organisation w/out deleting & recreating.
+Can I do this from the web UI?
+I can't find the button :(
+davidmiller just edit the dataset, there should be a drop down with the orgs you have access to.
+rossjones: only if I'm a sysadmin
+rossjones: (Unless I'm missing something)
+If you go to the organization, and edit that, click on members tab, you can add users with a specific role to the organisation.
+davidmiller if you make them admin they can admin the org, if you make them editor they can add datasets.
+rossjones: but only if they're a sysadmin or it hasn't been published?
+https://github.com/ckan/ckan/blob/master/ckan/templates/package/snippets/package_basic_fields.html#L59
+ummm.
+nickstenn: hmm. i've used those with pastet
+wardi: you can add_options to the root command, but if you want (or have) subcommands, it gets tricky
+ckanapi's cli loops back through paster when run locally and it has a bunch of those
+oh, i don't use that argument parser. docopt is way better
+davidmiller that seems rather, erm, strange
+wardi: well I'm trying to use argparse, but the problem is that if you have, for example
+seems to prevent changes at the template.. i wonder why
+davidmiller I'd check h.organizations_available to see if it is just confused logic on L59
+paster datastore -c dev.ini set-permissions -x
+then "-x" gets eaten by the top-level command
+does argparse even support subcommands?
+yes
+rather nicely, actually
+so set-permissions is a sub-sub-command?
+This is weird, I'm mocking the user_create action, and the mock object says it was called with one argument data_dict only, which is nonsense
+If I add a foo(*args, **kwargs) function and set that as the side_effect of the mock user_create object, it does indeed get called with data_dict only
+Ah, it's cause I mocked get_action as well and messed that up
+Tricky
+does anyone know which version of recline is used in CKAN? Particularly, has this issue fix been propagated to CKAN 2.2? https://github.com/okfn/recline/issues/380
+I think I'm having the same problem as the OP
+wardi: not really
+there's "paster datastore", which is a CkanCommand
+and "paster datastore set-permissions" which is a subcommand
+just like "paster sysadmin add"
+but the absurd thing is that it's essentially impossible to add --options for a specific subcommand, because the default option parser in CkanCommand parses all the way to the end of the line
+and barfs if it finds options it doesn't recognise
+which is I presume why almost all commands are forced to take an explicit ordering of options
+e.g. "paster db send-rdf TALIS_STORE USERNAME PASSWORD"
+what happens if you don't subclass form CkanCommand?
+like use paster's base command clas
+nigelb: there's far too much magic going on in CkanCommand for that to work, unfortunately
+aw hell.
+nickstenn Think everyone knows cli.py needs a re-write.
+Just nobody wants to do it :)
+wardi: wasn't there more places like the group_show which was doing a db query instead of solr query?
+i.e. calling all the packages in a group/organization
+nigelb: probably. resource_search is I believe
+
+2014-06-19
+Ok, so there's pylons.session and ckan.common.session, the same object but two names, so you need to mock it twice
+But then there are loads of modules in CKAN that do from * import sessiom
+If you do that in helpers.py for example, now ckan.lib.helpers.session needs to be mocked as well, you've given it a new name
+So if you want to mock the Pylons session for a CKAN request, you're gonna need several mocks
+And if you want those mock objects to have side effects you're gonna have to add the same side effects to all of them (and then inspecting the mock later is broken)
+There must be some way to mock several names with one mock object
+Anyway, CKAN strikes again
+anyone used tobes' ckanext-odata extension?
+ah - reading source clearly still much a WIP
+ckan data in Tableau!!!
+
+e.g. https://github.com/orchardup/docker-postgresql
+sure. but you'll need to document how to get all the docker stuff working.
+or rather connected up.
+rgrp although I'd note that it is in docker-postgreql and not in https://github.com/postgres/postgres ;)
+but in a first instance could you not leave that to devs - e.g. some people may use postgres ex
+but in a first instance could you not leave that to devs - e.g. some people may use postgres docker x
+rossjones: *exactly* -
+Although I like the idea of docker, I think the pain is constant - it just moves around a lot :)
+In that there'll be a lot less python setup'ing but more docker run'ning
+a good epitaph for humanity ;-)
+pretty aphoristic ;-) "I think the pain is constant - it just moves around a lot :)"
+julian todd's.
+i can imagine ;-)
+The first thing we ever agreed on :)
+anyway overall point - let not the best be the enemy of the good - i'm sure it could be *even* better but we could see what this is like
+and get the PR merged and have further improvements later :-)
+You know, maybe I should even look at the PR :)
+#1755 ? travis failed.
+maybe pg 8.4 issues?
+Probably.
+Although complains about connecting to Solr, so perhaps a travis issue.
+rossjones: that often goes away when the test is restarted :-/
+nickstenn: It's not that we're providing support for master, but we require things to be documented, tested, reviewed before merge into master (not before a release) because amercader is the only release manager and he has very little time, and we struggle to get a couple of releases out each year
+Adding more pressure onto the release process, by merging stuff into master that might have problems, is not good I think
+Though if something like Docker can be clearly marked as "alpha" that might be a get-out
+seanh: let's mark it as alpha - that sounds a great idea
+What exactly is holding it up at this point, that requires it to be alpha though? If it's something that can be fixed quickly we may as well fix it now
+It should probably be marked as experimental in any case
+god almighty datapusher is a hack on a stick
+recommended mechanism of installation -- direct from a git repository in the "ckan" org, with a dependency on a git repository in the "okfn" org
+configured with a python file that you're supposed to dump in the CWD of the running wsgi app
+(or alternatively, through and environment variable called "JOB_CONFIG" ... not "DATAPUSHER_CONFIG", because that would be too obvious)
+s/and/an/
+What okfn repo does it depend on?
+Ah, ckan-service-provider? That's out of date, the repo has actually been moved into the ckan org
+how do you guys backup solr..?
+davidmiller, ^^^ see..?
+I mean... this afternoon I've been reading lots of docs and have ended up with something like this:
+curl http://localhost:8983/solr/replication?command=backup&location=/home/ubuntu/backup/solr
+which doesn't appear to do anything, despite there being an update to the index etc etc etc
+ntoll__, i wouldn't bother
+i'd just recreate the search index from the database?
+Joel_re, that's what I think
+i.e. just reindex
+snap
+joet, cool... that's a good enough confirmation for me
+joet, so I guess that means configuring the DIH
+ntoll__: I told you #ckan would solve all your problems ;)
+so, anyone want to pay off my mortgage early..? cc/ davidmiller
+;-)
+this: curl http://localhost:8983/solr/dataimport?command=full-import
+returns a 404
+ntoll__, just run a 'paster search-index rebuild'
+joet, cool
+see http://docs.ckan.org/en/latest/maintaining/paster.html
+http://docs.ckan.org/en/latest/maintaining/paster.html#search-index-rebuild-search-index
+ntoll__ don't worry, solr will eat all your ram and swap before it loses any data.
+rossjones, right... but we need to say we have it covered ;-)
+ntoll__: See also http://docs.ckan.org/en/latest/maintaining/paster.html#pay-off-mortgage
+davidmiller, hah
+ntoll__ got the datastore and datapusher set up yet?
+rossjones, yup
+rossjones, we're just doing various devops-y bits and bobs
+so we (hopefully) never have to think about this sort of thing again... "it should just work" (tm)
+bit early to be drinking, isn't it?
+pubs are open ;)
+oh, which mad person gave me ops?
+amln tempting ...
+nickstenn: what does setting up logging on botbot.me involve?
+/invite the bot?
+nigelb: send a nice email to beep@botbot.me
+aha
+I filled up the form a while back
+is that slower than the email?
+wait, nvm.
+I must be imagining things.
+is there a link to the hangout?
+https://plus.google.com/hangouts/_/event/cb1vmkss426lkqicj94a3amvd1c?authuser=0&hl=en-GB
+http://pad.okfn.org/p/ckan-meeting
+cheers ;)
+i forgot amercader you mentioned earlier you wanted tot discuss 2.3?
+^ nigelb
+it was 2.2.1
+general release stuff anyway, I guess we can hold it over irc now or leave it till tuesday? I can add a note to the pad now
+we talked with nigelb about splitting the work, but if someone wants to help here's a list of stuff that needs to be backported. By helping I mean reviewing and writing a comment "this looks good to be backported"
+or "this might cause issues"
+https://github.com/ckan/ckan/issues?direction=desc&labels=Backport+pending%2CBackport+2.2.1&page=2&sort=created&state=closed
+ok I will add that to the pad to remind everyone next tiem anyway
+cool
+is docker going in :-) - love to see that ;-)
+everyone would love to.
+amercader: what's a clean way to get the ext_ query parameters in a helper?
+short of parsing the URL, that is.
+nigelb: I don't think we are passing the query params to the templates
+you can use request.params
+rgrp, nigelb has been assigned for review it, but I think more people will probably be looking over it anyway as many of us will probably end up using it when developing anyway
+any sense of eta?
+nope
+not in the next 2 weeks for sure if that helps.
+amercader: calling request inside the helper doesn't work. Trying other things.
+nigelb: is this on th rendered search page? (ie /dataset?ext_xx=yyy)
+amercader: yes
+if so pylons.request.params I'd expect have these values
+will look.
+it does
+but not from helpers
+weird.
+let me see if I'm doing something wrong.
+might be some voodoo ckan override thing :)
+Heh.
+rgrp: for development and simple installs docker image that has solr and postgres inside would still be my preference
+nickstenn: ^
+wardi: maybe but right now you have a pull request waiting to go in ...
+afaict it doesn't make anything worse and it could make things better and be improved going forward ...
+you can't let the best be the enemy of the good ;-)
+rgrp: as it stands it adds a third option for when we're supporting users "are you using package? source install? docker?"
+and if docker the way it stands then we get into network configuration and firewall issues the
+wardi: right but all of that *could* come later - this is useful to get in surely and if imperfect it could be improved later as people use it
+I don't want to do docker, firewall and network support on ckan-dev
+wardi: right but you also will end up not getting patches ;-)
+well I don't particularly want to have to fight for weeks and weeks to get something that poses no risk to ckan's stability accepted
+also, if you're providing support for the master branch you're already fucked
+nickstenn: I think with reliable instructions for postgres+solr opening ports and listening on the right interfaces added to the docker install page it's good to go
+that's the place I got stuck
+then afterwards, as discussed we provide solr and postgres docker images that "just work" with the ckan one
+wardi: but most people can surely figure that out and doesn't vary across machines? i mean i might deploy this on mac or on digital ocean or even use a remote db?
+that said i've not walked through this in detail
+rgrp: firewall and networking is hugely different from one os to another
+not sure how you can do lxc on a mac...
+nigelb boot2docker
+and if we only support one os as the host.. where's the benefit?
+nigelb: https://docs.docker.com/installation/mac/
+perhaps is lack of dockerfile in master is blocking ckanexpress it should be put somewhere else until it's ready?
+where ready == documented + complete in more than one setup
+so, my argument is that "let's put ckan+solr+postgres in the same instance" is the "good" and the direction nickstenn is going is the "best"
+anyway, right now, it's a matter of us having time to review the thing.
+s/instance/image
+rossjones: sweet.
+I agree with rgrp that having something good for "right now" is better than "best".
+me too
+what nickstenn has now is good but might need lots of docs to be usable by an average sysadmin
+My point and I think what rgrp and nickstenn are saying is this
+we have it, we don't have to announce it yet.
+it can still be alpha support.
+i.e. it's *not* ready for public use and we can't support it very well.
+right. as nickstenn said, we're not officially supporting master anyway
+And we'll prioritize cleaning up the docs by 2.3
+I can live with that. That's how we're doing our development anyway.
+nigelb: ok, you think it can go in even if the docs aren't finished
+wardi: with zero support from us.
+nigelb: I would like at least one line for "you make postgres and solr listen on the docker interface on ubuntu by editing these files .."
+wardi: I agree.
+I'd probably add it myself.
+I didn't find the place for solr yet, or I would have too
+:(
+I guess it's a jetty thing, buried in some xml file no doubt
+(I can see how frustrating it is for nick to have this pull request kept open)
+sorry i disappeared
+wardi: i think my omission here is related to the fact that I just don't think we can support postgres and solr
+there's also this thing about what it's for.
+we can make deployment even easier by providing preconfigured docker images for postgres and solr, for sure
+I see it as a production thing in my head.
+but that's a nice-to-have, imo
+Not as a development thing.
+rossjones: as for ckan express, I'm already working on that in a separate repo
+nickstenn so why the rush to get it into master? I understand the speed of review thing - but pretty much *everyone* on core is part-time on it, no?
+yeah i saw the commits going into ckanexpress :)
+rossjones: for me this is about https://github.com/ckan/ideas-and-roadmap/issues/25 and https://github.com/ckan/ideas-and-roadmap/issues/23
+rossjones: i don't think a projected time to merge of 2 weeks from now is what you could reasonably call "a rush"
+not if that's acceptable.
+not when the PR has already been open (if, admittedly, not in a mergeable state) for more than a month
+rossjones: one of the major things people raise is simpler ways to deploy - this may not be perfect but its there :-)
+rgrp yes, I agree it does that well.
+rossjones: right :-)
+presumably someone is still going to have to manually set up postgres and solr?
+in the new quick-install via docker world.
+rossjones: and more importanlty when you ask about a rush the issue tends to be that if PRs sit around they go stale and end up dying ...
+rgrp this is true.
+rossjones: or run three commands with preconfigured docker images for pg and solr as has been discussed
+same for tickets, except they just end up generating dupes
+rossjones: right :-)
+I say just get the PR finished properly and then get it merged, I don't see what all the rushing and pushing on this is for, to be honest. Response to the PR has been overwhelmingly positive and people have only asked for a few relatively small tweaks. Seems not bad at all to me, it's quite a big addition after all.
+nickstenn cool, are those ready too?
+rossjones: 3rd parties have those right ;-)
+i mean we don't need to dockerize postgres!
+[travis-ci] wardi/ckan two-stage-dataset-create 47dcd08 http://travis-ci.org/wardi/ckan/builds/27880574 Ian Ward: The build was broken.
+ok.. why am I getting a DetachedInstanceError in these other tests now?
+I just switched my test to use a separate test app instance for each test
+vitorbaptista: ^ thoughts?
+should I make the same change to those tests too?
+that's not going to be easy
+wah
+why do we allow anonymous access for user_update?
+I spent 30 minutes debugging a testfailure
+ah, password reset
+daaaaaaang
+[travis-ci] ckan/ckan 1412-generate-apikey 9daaa36 http://travis-ci.org/ckan/ckan/builds/27838389 nigelb: The build was broken.
+AH HELL NO.
+phew, pep8 errors
+Has anyone built something like http://csvlint.io/ for CKAN as part of the resource upload workflow for publishers?
+My googling says no :(
+Maybe you could write a CKAN plugin that integrates with csvlint.io itself?
+seanh: Shure, although it's fallen over once this morning, which doesn't exactly fill me with confidence :)
+Was more a query along the lines of "what existing workflows are there for publisher validation within CKAN that improve on the default"
+davidmiller: imagine you could even do something super simple in pure js here if one were so inclined (validation is relatively straightforward if you only sample, say, first 10k rows) - which would be nough for feedback
+rgrp: Rite. I was hoping to write No Code though. I hate maintaining code.
+davidmiller: i know there is https://github.com/standard-analytics/jts-validator
+seanh: ran into a weirdness with tests for auth functions.
+the example you have only works for functions with allow_anonymous_access
+For the others, you need to add 'auth_user_obj' to the context.
+Huh
+Seems like it could be fixed in the helper function that the tests use to call the auth functions?
+should it?
+not having it it is useful for caes where you want to test not-logged in user.
+or perhaps the user should be handled by the helper without messing with the context in the test.
+Not sure, I can't remember exactly how the tests work to be honest
+I do, I went through most of it today.
+I'll file a bug :)
+The apikey regeration thing has tests now.
+Awesome :)
+nigelb: sticking a 'user' in the context works for some auth functions, but not others?
+wardi: https://github.com/ckan/ckan/blob/master/ckan/new_authz.py#L170
+is_authorized needs auth_user_obj to know that the function is authorized.
+This is only for POST requests.
+though, now I'm amused.
+if I set it to just be true, that might work too.
+which is the weirdest thing.
+seems sloppy. we should have a single "get the user object" function to call instead of our current mish mash of query-database-directly, use c.user, use context.auth_user_obj (and probably others)
+we abuse the context so much, it's making me feel sick.
+nigelb: yeah, setting to True would work in this case. which is also terrible
+I'd love to have consistency.
+ah, auth_user_obj is thanks to our lovely api.
+If you sign in with github, this page provides an accurate summary on whether 2.3 in August is possible http://burndown.io/#ckan/ckan/5
+(spoiler, it's not)
+There are 83 open issues. we need to fix more than 1 issue per day to get there.
+august is a hard time to do real work anyway
+wardi: wait, why?
+too pretty outside?
+too hot here. need to be on the patio
+also, vacation
+ah :)
+On the one hand, I want us to release something
+It may not be perfect
+but I don't want to wait 1 year for the "perfect" release.
+Instead do a "what we have now" release
+that probably makes sense
+Lots of small things we can improve, going through the bugs.
+But it also needs to be sored for realisticness.
+I'd say with a few exceptions, big work that isn't started by July 1st can't go into 2.3.
+actually, let me rephrase. No exceptions.
+big work = changing interfaces/api/etc
+we won't have time to review and test everything by then.
+so, a july feature freeze
+I'm saying "started". So, things that just need polishing like resource views should probably go in.
+adria and you would be better judges.
+I'll raise it tomorrow.
+I think adria would be the best judge. there are still large swaths of ckan that I've never used
+there are large swaths I've used, but I'm scared to look.
+if anyone's interested I've removed the [WIP] tag from my docker pull request, as there is now documentation: https://github.com/ckan/ckan/pull/1755
+nickstenn: One tip about the docker thing though
+I recommend decoupling getting docker into CKAN core from getting it ready for ckan express, if you aren't already
+seanh: absolute
+*ly
+We can deploy ckan express using your docker stuff, even if the stuff hasn't been merged in ckan yet
+agreed, and I'm certainly not planning on being blocked on review
+(It just means we have to be willing to take the pain of updating our express deployment with any changes when it does get merged)
+Cool
+but I have to say I'm concerned more generally about the glacial pace of the review process
+and in general I think the level of conservatism I see and hear is more likely to alienate potential contributors than ensure the ongoing stability of the CKAN project
+:)
+Sadly code review does tend to be a bottleneck and it is a problem, for example with all the ckan features I did for datapackager, they were done in ckanext-datapackager (and now, they will not be contributed back to ckan) because with the timeline we had getting them into ckan as a non-starter
+I might make a proposal for some changes to the process on ckan-dev
+I think deployment-related stuff hits more of this conservatism than most other changes would
+But suggestions are welcome
+There are also just very few core devs who each have very little time, I'd say that's the bigger cause of the bottleneck in most cases
+there's a very real risk that the entire project will stagnate if we're as hostile to random contributors as we are to me :)
+seanh: absolutely, time is the key thing here
+but in which case I think we're aggravating the problem my making it revolve around concensus decisions in biweekly meetings
+it might make more sense to adopt a policy where reviews can happen asynchronously
+and the requirements for merge are clear: "two LGTM from core committers"
+say
+That sounds like a good idea to me
+The reason the review process revolves around dev meetings though, is because it's at the meetings that we assign reviewers to PRs
+You don't need consensus of the dev meeting to merge
+And you could find a reviewer for a PR outside of the dev meeting and get them to review and merge it on their own (that just never happens - no one has extra time to take on more PRs for review, we each have a backlog)
+nickstenn: I started to look at your docker work but got pulled away
+I really would like to start using it for testing and development
+seanh: I can't believe that making the process revolve around in person meetings helps that problem...
+I don't think there are many examples of a contributor coming along and submitting a pull request, then being scared off by the dev team. (Please look through open and closed PRs for examples.) But there is a bottleneck and anything we can do to help it is good I think
+nickstenn: most prs get assigned to one person and that person merges it, but yours is a little bigger than most prs
+nickstenn: So we need a different way of assigning reviewers to PRs? Could help yes
+wardi: just to be clear, I'm confusing the issue by conflating a) my PR, with b) concerns in my job role about whether our processes are right
+But honestly, I get assigned PRs to review at dev meetings and then usually when the next dev meeting rolls around I still haven't managed to review them ... Getting me more time each week to review PRs, or getting more reviewers in, would help more than process tweaks imho (though process tweaks are also welcome)
+* wardi nods
+right. but at the moment the cruft is just accumulating
+we have open PRs from nearly 1.5 years ago
+We always hover around 50ish open PRs ... which is a lot!
+Open ones from 1.5 years ago are probably junk thouh
+of course they are
+nickstenn: also, I think we do go harder on people we know than people we dont (esp. wrt unit tests etc before merging)
+wardi: ok, that's fair enough
+i give as good as I get, so I'm not so bothered :)
+So no one has had time to go through the open PRs and clean out junk for at least 1.5 years then :)
+Hello
+wardi, seanh, joet - meeting!
+rossjones ^
+nigelb sorry, not today. will definitely make Thurs
+grrrrrrrr: ^^
+nigelb, in meeting with glasgow, feel free to randomly assign me things
+link?
+hehsec
+https://gist.github.com/nigelbabu/076ad12c13b2071de8e1#file-ckan_nginx-conf-L33
+I'm pretty busy too :(
+did build the 14.04 package I'll add feedback as an issue
+also will be away on thurs
+grrrrrrrr: are you familiar with owner_org_validator?
+grrrrrrrr: maybe you could respond to #1775?
+hey folks - any progress re the docker PR - i for one would love to see that in ...
+rgrp: it was a small meeting today
+* NOTICE: [freenode-info] if you're at a conference and other people are having trouble connecting, please mention it to staff: http://freenode.net/faq.shtml#gettinghelp
+Hello all. If I have Apache/CKAN in a server and Postgres databases in another one, in which server do I install the Datapusher?
+rparra: I would recommend on the same server as apache
+that way you would only need one apache server.
+Just make sure the datapusher listens on localhost, not on 0.0.0.0
+nigelb thanks, may I ask why the change in the Datapusher listening address? Under what conditions should I use 0.0.0.0 (like the docs do)?
+rparra: actually, you don't need that change. apologies.
+Just follow the docs.
+nigelb, no problem.  Thanks a lot for your help. I suspected that Datapusher belonged to the app server, but wanted to check if it worked with remote databases. Again, thank you
+It does not work with remote databases.
+* NOTICE: [freenode-info] channel trolls and no channel staff around to help? please check with freenode support: http://freenode.net/faq.shtml#gettinghelp
+hi I've had problems in 2.2 getting the file upload to work
+i've added ckan.storage_path
+but I can't reproduce on a non 14.04 machine
+well any non ubuntu really
+wardi, i added a quick note to #1775
+grrrrrrrr: thanks
+sorry I keep missing meetings
+grrrrrrrr: explain more?
+what's the error?
+nigelb, basically I can't see the upload button :(
+grrrrrrrr: that's weird. The only condition to see the upload button is ckan.storage_path setting being defined.
+looking at the templates I should just need the ckan.storage_path
+this is on a package install of 2.2 on 14.04
+You built your own package?
+I'll update the packaging git hub
+yeah was such fun
+but I need it for this job
+Are you sure you restarted the apache server after changing the setting?
+there are issues as noted with the apache config
+also on ubuntu 14.04 solr is sort of prefered on tomcat and that runs on port 8080
+so ckan clashes
+but the files need the .conf extension and security changes etc as people have said
+yeah I did many a restart
+maybe I misspelled it ;p
+but you would agree if we have that setting it should show up
+nothing else should be needed
+yes, I would agree.
+nigelb, thanks
+nigelb, https://github.com/ckan/ckan-packaging/issues/3
+I'll add better info when I get home in a few days
+grrrrrrrr: thank you!
+nigelb sorry I've been away. what do you mean it doesn't work with remote databases? I'll rephrase my question, because I really need to be sure of this
+rparra: i.e. it doesn't need a remote database to work
+to be more clear.
+I have Apache/CKAN in a server, and CKAN and Datastore postgres databases in another server
+sounds about right.
+so if I install datapusher in the same server where Apache is running, will it work with the remote database server?
+the datapusher talks to the ckan database via the ckan api.
+ok, I misunderstood and got scared for a moment
+over HTTP
+so, what I was trying to tell you
+is that postgres is not needed for datapusher
+obviously, I didn't do a good job. Forgive me. It's 9:20 pm and I should grab some dinner and get away from the computer :)
+great. I understand now.
+Understing things by chat is hard :) I really appreciate your help, enjoy your meal!
+fixed it.. think it had to do with changing ports but not updating the ckan endpoint in the pylons config
+if I want to add a user to an org in a test, should I make a factory or just use the action to add my user to my org?
+(I'm not testing adding a user to an org)
+oh.. I can just pass users to the factories.Organization call
+[travis-ci] wardi/ckan fix-package-permissions 64fd260 http://travis-ci.org/wardi/ckan/builds/27680100 Ian Ward: The build was broken.
+what's the state of the ckan2.2 package?
+it seems broken
+may just be me though
+was it ever released?
+grrrrrrrr: broken how?
+There's a datapusher bug that I'd love to fix in the package, but for that I we need to release 2.2.1 because of how we do things.
+nigelb, I can't install using dpkg -i ...
+Do you have the dependencies installed?
+python can't do an import from logging
+wait, what.
+that shouldn't happen.
+yeah
+I think the virtalenv is broken
+are you trying this on 12.04 amd64?
+It won't work on 14.04 for more reasons than virtualenv being broken.
+I did this a long time ago, but I've been wanting to talk about this at a show and tell http://salaryconverter.nigelb.me/
+(more for the data bit than webdev bit though)
+ok 14.04 is the problem
+is this fixable?
+well, the "fix" is to build a package for 14.04
+We can't have one package work for both because the virtualenv has compiled libraries which will only work on 12.04.
+how easy is it to create a 14.04 package?
+There's a few changes to make to the ansible script for apache changes, and then you can run the script on a 14.04 machine to create a new package.
+Script - https://github.com/ckan/ckan-packaging
+if something was deprecated two years ago can I consider it safe to remove?
+something to ask tomororw, I think (personally, I think we should kill it with fire, but that's just me)
+thanks
+hmmm i could really do with a 14.04 package
+wardi, what is it/
+grrrrrrrr: https://github.com/ckan/ckan/commit/faa8b296
+this is for the legacy templates so probably should be removed with them or else you will break tests
+grrrrrrrr: ah, thanks. good to know
+a lot of crap is related to them
+I'd also like to stop populating c.form, and render the form from the template that needs it with a snippet
+yeah that is how it should be done
+that hasn't been officially deprecated, but just seems tidier
+if someone is using c.form in their templates it will break.. but I don't think people should be using c.form
+this is the whole we should kill c stuff but it is so embedded
+one pr at a time
+One template at a time :)
+:) and nice small ones too
+nigelb, how do I bribe you to create a 14.04 package?
+grrrrrrrr: a time machine! If I had time to do it, I'd be doing it :(
+that script looks like it is tied to okf servers do you know if it works just locally?
+this is from reading the readme
+The only thing that's tied to okf servers is that there needs to be a /var/www/build
+otherwise, it will work on any machine
+Probably wise to run it on a vm though.
+yeah well I think i'll have to try this.  Is there any good info on the process?
+ie where ckan needs to live etc
+the config needs to live in /etc/ckan/default
+and ckan source needs to live in /usr/lib/ckan/default/
+ah ok the script pulls from git hub
+all that script does is setup ckan, setup apache, nginx, and bundle the whole thing into a package and run a post install script to setup some stuff
+i'll go set up a vm
+when you here till?
+another hour at most, 9 pm here.
+ok thanks I'll see how I get on
+argh
+what went wrong? :)
+contexts, bloody contexts
+ah.
+with a  sprinkling of my stupidity
+That's what I don't like about contexts.
+It feels fragile and easily breakable.
+i was running organization_create inside a loop, but i had created the context outside of the loop, because i just figured i needed model and session
+so i ended up just overwriting the same org over and over again, instead of building up a list of them
+* nigelb facepalms
+ckanapi deliberately creates new ones each time for this reason
+our interface is bad an we should feel bad
+because it adds group to the context, and if group is in the context,  group_dict_save will take that and assume you meant that was the one to overwrite
+btw grrrrrrrr you might want to be careful of the stuff mentioned in https://github.com/ckan/ckan/issues/1651
+some people were mentioning solr-jetty was broken, might be fixed now
+joet: I think that was the exact problem someone here was struggling with for some time
+let's just stop accepting and storing the group in the context of that call
+i'll have to see if the other _create actions behave in a similar way
+or stop passing a context to the dictize functions..
+if they need some parameters let's give them some parameters
+joet, thanks
+[travis-ci] ckan/ckan 1251-resource-view 194d6c1 http://travis-ci.org/ckan/ckan/builds/27712619 Vitor Baptista: The build was broken.
+I'm getting "Upload error: Could not connect to DataPusher." in CKAN - what should I do to troubleshoot?
